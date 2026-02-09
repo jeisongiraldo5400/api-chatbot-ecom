@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from database import get_session
-from models import User, UserCreate
 from security import get_password_hash
-from typing import Optional
 from uuid import UUID
+from models.users import User, UserCreate
 
 router = APIRouter(prefix='/users', tags=['Users'])
 

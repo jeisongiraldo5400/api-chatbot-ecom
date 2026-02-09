@@ -1,0 +1,20 @@
+import os
+from sqlmodel import create_engine, Session, SQLModel
+from dotenv import load_dotenv
+
+load_dotenv()
+
+postgres_url = os.getenv("DATABASE_URL")
+
+if not postgres_url:
+  raise ValueError("La variable de entorno de Postgres no está configurada")
+
+engine = create_engine(postgres_url, echo=True)
+
+def init_db():
+  SQLModel.metadata.create_all(engine)
+
+
+def get_session():
+  with Session(engine) as session:
+    yield session

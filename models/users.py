@@ -13,6 +13,9 @@ class UserBase(SQLModel):
 class UserCreate(UserBase):
   password: Annotated[str, StringConstraints(max_length=72)]
 
+class UserUpdate(UserBase):
+  pass
+
 
 class User(UserBase, table=True):
   __tablename__ = "users"

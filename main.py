@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from database import init_db
-from routes import users, services, documents, chat, analytics
+from routes import users, services, documents, chat, analytics, auth
 
 app = FastAPI(
   title="Chatbot Admin API",
@@ -15,8 +15,9 @@ def on_startup():
 
 
 # Routes
-app.include_router(users.router)
-app.include_router(services.router)
-app.include_router(documents.router)
-app.include_router(chat.router)
-app.include_router(analytics.router)
+app.include_router(users.router, prefix="/api/v1")
+app.include_router(services.router, prefix="/api/v1")
+app.include_router(documents.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")

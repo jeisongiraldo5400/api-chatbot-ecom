@@ -8,6 +8,9 @@ class ServiceBase(SQLModel):
   name: str = Field(unique=True, index=True)
   description: Optional[str] = None
 
+  # Category
+  category_id: int = Field(foreign_key="categories.id")
+
 
 class Service(ServiceBase, table=True):
   __tablename__ = "services"
@@ -21,4 +24,5 @@ class ServiceCreate(ServiceBase):
 class ServiceUpdate(SQLModel):
   name: Optional[str] = None
   description: Optional[str] = None
+  category_id: Optional[int] = None
   status: Optional[bool] = None

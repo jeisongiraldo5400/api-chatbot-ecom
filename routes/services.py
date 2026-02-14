@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from database import get_session
-from models.sevices import Service, ServiceCreate, ServiceUpdate
+from models.services import Service, ServiceCreate, ServiceUpdate
 
 router = APIRouter(prefix="/services", tags=['Services'])
 

@@ -1,4 +1,6 @@
 from .users import User
-from .sevices import Service
+from .services import Service
+from .document import Document
+from .chunk import DocumentChunk
 
-__all__ = ["User", "Service"]
+__all__ = ["User", "Service", "Document", "DocumentChunk"]

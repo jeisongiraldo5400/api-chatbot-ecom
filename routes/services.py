@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from database import get_session
-from models.sevices import Service, ServiceCreate
+from models.sevices import Service, ServiceCreate, ServiceUpdate
 
 router = APIRouter(prefix="/services", tags=['Services'])
 
@@ -35,7 +35,7 @@ def get_service(service_id: int, session: Service = Depends(get_session)):
 
 
 @router.patch('/{service_id}', response_model=Service)
-def update_service(service_id: int, service_data: ServiceCreate, session: Session = Depends(get_session)):
+def update_service(service_id: int, service_data: ServiceUpdate, session: Session = Depends(get_session)):
   db_service = session.get(Service, service_id)
   if not db_service:
     raise HTTPException(status_code=404, detail="Service not found")

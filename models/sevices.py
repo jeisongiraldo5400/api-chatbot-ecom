@@ -17,3 +17,8 @@ class Service(ServiceBase, table=True):
 
 class ServiceCreate(ServiceBase):
   pass
+
+class ServiceUpdate(SQLModel):
+  name: Optional[str] = None
+  description: Optional[str] = None
+  status: Optional[bool] = None

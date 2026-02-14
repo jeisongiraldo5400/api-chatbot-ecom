@@ -8,6 +8,8 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 from langchain_core.messages import SystemMessage, HumanMessage
 import os
 import time
+from security import get_current_user
+from models.users import User
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -19,7 +21,8 @@ llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.0)
 async def ask_chatbot(
   question: str,
   service_id: int,
-  session: Session = Depends(get_session)
+  session: Session = Depends(get_session),
+  current_user: User = Depends(get_current_user)
 ):
   start_time = time.time()
 
@@ -65,6 +68,7 @@ async def ask_chatbot(
     chunk_ids = [str(r.id) for r in results]
 
     new_log = QueryLog(
+      user_id=current_user.id,
       service_id=service_id,
       query_text=question,
       answer_text=ai_response.content,

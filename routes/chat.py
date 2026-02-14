@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from typing import List, Optional
-from uuid import UUID
 from database import get_session
 from models.chunk import DocumentChunk
-from models.services import Service
 from models.document import Document
+from models.query_log import QueryLog
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 import os
+import time
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -19,9 +18,11 @@ llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.0)
 @router.post("/ask")
 async def ask_chatbot(
   question: str,
-  service_id: int,  # El filtro que viene del dropdown de Electron
+  service_id: int,
   session: Session = Depends(get_session)
 ):
+  start_time = time.time()
+
   try:
     # 1. Convertir la pregunta del usuario en un Vector
     query_vector = embeddings_model.embed_query(question)
@@ -30,7 +31,7 @@ async def ask_chatbot(
     # Usamos una consulta SQL pura a través de session para aprovechar pgvector
     # Buscamos los 5 fragmentos más parecidos que pertenezcan al servicio elegido
     statement = (
-      select(DocumentChunk.content, DocumentChunk.page_number)
+      select(DocumentChunk.id, DocumentChunk.content, DocumentChunk.page_number)
       .join(Document, Document.id == DocumentChunk.document_id)
       .where(Document.service_id == service_id)
       .order_by(DocumentChunk.embedding.cosine_distance(query_vector))
@@ -57,7 +58,21 @@ async def ask_chatbot(
     # 5. Generar respuesta con Gemini
     ai_response = llm.invoke([system_prompt, human_prompt])
 
-    # 6. (Opcional) Aquí podrías guardar en queries_log para tu análisis
+    # 6. Calcular el tiempo de respuesta y guardamos los logs
+    end_time = time.time()
+    response_time = round(end_time - start_time, 2)
+
+    chunk_ids = [str(r.id) for r in results]
+
+    new_log = QueryLog(
+      service_id=service_id,
+      query_text=question,
+      answer_text=ai_response.content,
+      context_chunks_ids=chunk_ids,
+      response_time=response_time
+    )
+    session.add(new_log)
+    session.commit()
 
     return {
       "answer": ai_response.content,

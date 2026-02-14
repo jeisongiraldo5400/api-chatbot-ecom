@@ -5,13 +5,15 @@ from database import get_session
 from models.document import Document, DocumentStatus
 from services.s3_service import S3Service, s3_client
 import hashlib
+from models.users import User
+from security import get_current_user
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from models.chunk import DocumentChunk
 import os
 
-import tempfile # Librería nativa de Python
+import tempfile  # Librería nativa de Python
 from langchain_community.document_loaders import PyPDFLoader
 
 router = APIRouter(prefix="/documents", tags=['Documents'])
@@ -85,7 +87,8 @@ async def upload_document(
   service_id: int = Form(...),
   title: str = Form(...),
   file: UploadFile = File(...),
-  session: Session = Depends(get_session)
+  session: Session = Depends(get_session),
+  current_user: User = Depends(get_current_user)
 ):
   if not file.filename.endswith(".pdf"):
     raise HTTPException(status_code=400, detail="El archivo debe ser un PDF")

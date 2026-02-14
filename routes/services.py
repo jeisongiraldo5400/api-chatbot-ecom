@@ -2,12 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from database import get_session
 from models.services import Service, ServiceCreate, ServiceUpdate
+from models.users import User
+from security import get_current_user
 
 router = APIRouter(prefix="/services", tags=['Services'])
 
 
 @router.post('/', response_model=Service)
-def create_service(service_data: ServiceCreate, session: Session = Depends(get_session)):
+def create_service(service_data: ServiceCreate, session: Session = Depends(get_session),
+                   current_user: User = Depends(get_current_user)):
   """Create a new service"""
   existing = session.exec(select(Service).where(Service.name == service_data.name)).first()
   if existing:
@@ -21,7 +24,7 @@ def create_service(service_data: ServiceCreate, session: Session = Depends(get_s
 
 
 @router.get('/', response_model=list[Service])
-def get_all_services(session: Session = Depends(get_session)):
+def get_all_services(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   return session.exec(select(Service)).all()
 
 
@@ -35,7 +38,8 @@ def get_service(service_id: int, session: Service = Depends(get_session)):
 
 
 @router.patch('/{service_id}', response_model=Service)
-def update_service(service_id: int, service_data: ServiceUpdate, session: Session = Depends(get_session)):
+def update_service(service_id: int, service_data: ServiceUpdate, session: Session = Depends(get_session),
+                   current_user: User = Depends(get_current_user)):
   db_service = session.get(Service, service_id)
   if not db_service:
     raise HTTPException(status_code=404, detail="Service not found")
@@ -52,7 +56,8 @@ def update_service(service_id: int, service_data: ServiceUpdate, session: Sessio
 
 
 @router.delete('/{service_id}')
-def delete_service(service_id: int, session: Session = Depends(get_session)):
+def delete_service(service_id: int, session: Session = Depends(get_session),
+                   current_user: User = Depends(get_current_user)):
   db_service = session.get(Service, service_id)
 
   if not db_service:

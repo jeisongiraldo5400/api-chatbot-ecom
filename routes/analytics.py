@@ -4,12 +4,14 @@ from sqlalchemy import func
 from database import get_session
 from models.query_log import QueryLog
 from models.services import Service
+from models.users import User
+from security import get_current_user
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 
 @router.get('/')
-def get_dashboard_metrics(session: Session = Depends(get_session)):
+def get_dashboard_metrics(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   # 1. Total de consultas realizadas en toda la historia
   total_queries = session.exec(select(func.count(QueryLog.id))).one()
 

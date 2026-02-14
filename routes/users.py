@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 from database import get_session
 from security import get_password_hash
 from uuid import UUID
-from models.users import User, UserCreate
+from models.users import User, UserCreate, UserUpdate
 from security import get_current_user
 
 router = APIRouter(prefix='/users', tags=['Users'])
@@ -35,7 +35,7 @@ def create_user(user_data: UserCreate, session: Session = Depends(get_session),
 
 
 @router.patch('/{user_id}', response_model=User)
-def update_user(user_id: UUID, user_data: UserCreate, session: Session = Depends(get_session),
+def update_user(user_id: UUID, user_data: UserUpdate, session: Session = Depends(get_session),
                 current_user: User = Depends(get_current_user)):
   db_user = session.get(User, user_id)
 

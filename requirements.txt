@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+psycopg2-binary  # O 'psycopg[binary]' para Postgres
+pgvector         # Importante para tus vectores de IA
+langchain        # Si ya lo estás usando
+pytho-dotenv

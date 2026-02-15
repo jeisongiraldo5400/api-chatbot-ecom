@@ -7,6 +7,9 @@ load_dotenv()
 postgres_url = os.getenv("DATABASE_URL")
 
 if not postgres_url:
+  print("--- DEBUG VARIABLES ---")
+  print(f"Variables detectadas: {list(os.environ.keys())}")
+  print("-----------------------")
   raise ValueError("La variable de entorno de Postgres no está configurada")
 
 if postgres_url.startswith("postgres://"):

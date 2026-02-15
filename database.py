@@ -9,6 +9,9 @@ postgres_url = os.getenv("DATABASE_URL")
 if not postgres_url:
   raise ValueError("La variable de entorno de Postgres no está configurada")
 
+if postgres_url.startswith("postgres://"):
+    postgres_url = postgres_url.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(postgres_url, echo=True)
 
 def init_db():

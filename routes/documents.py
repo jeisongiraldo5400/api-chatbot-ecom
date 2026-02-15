@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
-from sqlmodel import Session
+from sqlmodel import Session, select
 from uuid import UUID
 from database import get_session
 from models.document import Document, DocumentStatus
-from services.s3_service import S3Service, s3_client
+from services.s3_service import s3_client
 import hashlib
 from models.users import User
 from security import get_current_user
@@ -125,3 +125,53 @@ async def upload_document(
 
   except Exception as e:
     raise HTTPException(status_code=500, detail=f"Error en el servidor: {str(e)}")
+
+
+@router.get("/")
+def get_all_documents(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+  """Obtiene todos los documentos ordenados por el más reciente"""
+  # Usamos desc() para que los últimos que subas aparezcan arriba en tu tabla
+  statement = select(Document).order_by(Document.upload_date.desc())
+  documents = session.exec(statement).all()
+
+  return documents
+
+
+@router.delete("/{document_id}")
+def delete_document(document_id: UUID, session: Session = Depends(get_session),
+                    current_user: User = Depends(get_current_user)):
+  """Elimina un documento y todos sus vectores de entrenamiento"""
+  db_doc = session.get(Document, document_id)
+
+  if not db_doc:
+    raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+  # IMPORTANTE: Aquí eliminamos el registro de la DB
+  # (Opcionalmente, más adelante podríamos decirle a boto3 que también borre el PDF físico de S3)
+  session.delete(db_doc)
+  session.commit()
+
+  return {"message": "Documento y vectores de entrenamiento eliminados correctamente"}
+
+
+@router.get("/{document_id}/view")
+def view_document(document_id: UUID, session: Session = Depends(get_session)):
+  """Genera una URL segura y temporal para ver el PDF directamente desde S3"""
+
+  # 1. Buscar el documento en la base de datos
+  db_doc = session.get(Document, document_id)
+  if not db_doc:
+    raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+  try:
+    # 2. Generar la URL firmada (por defecto la configuramos para que dure 1 hora)
+    presigned_url = s3_client.get_download_url(db_doc.s3_key)
+
+    # 3. Retornar la URL al frontend
+    return {
+      "title": db_doc.title,
+      "url": presigned_url
+    }
+
+  except Exception as e:
+    raise HTTPException(status_code=500, detail=f"Error al generar el enlace de S3: {str(e)}")

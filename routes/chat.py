@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from langchain_postgres import PostgresChatMessageHistory
+import psycopg
 from sqlmodel import Session, select
 from database import get_session
 from models.chunk import DocumentChunk
@@ -10,11 +12,14 @@ import os
 import time
 from security import get_current_user
 from models.users import User
+import uuid
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 embeddings_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001", output_dimensionality=768)
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.0)
+
+DB_URL = os.getenv("DATABASE_URL")
 
 
 @router.post("/ask")
@@ -56,10 +61,36 @@ async def ask_chatbot(
       f"CONTEXTO:\n{context_text}"
     ))
 
+    # Creamos una conexión sincrónica exclusiva para el historial
+    sync_connection = psycopg.connect(DB_URL)
+    table_name = "langchain_chat_history"
+
+    raw_session_string = f"user_{current_user.id}_service_{service_id}"
+    session_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, raw_session_string))
+
+    PostgresChatMessageHistory.create_tables(sync_connection, table_name)
+
+    chat_history = PostgresChatMessageHistory(
+      table_name,
+      session_id,
+      sync_connection=sync_connection
+    )
+
+    previous_messages = chat_history.messages[-6:]
+
     human_prompt = HumanMessage(content=question)
 
     # 5. Generar respuesta con Gemini
-    ai_response = llm.invoke([system_prompt, human_prompt])
+    # El orden es vital: Sistema (Reglas+Contexto) -> Historial -> Nueva Pregunta
+    messages_to_send = [system_prompt] + previous_messages + [human_prompt]
+    ai_response = llm.invoke(messages_to_send)
+
+    # --- GUARDAR EN MEMORIA PARA LA PRÓXIMA VEZ ---
+    chat_history.add_user_message(question)
+    chat_history.add_ai_message(ai_response.content)
+
+    sync_connection.commit()  # Aseguramos que se guarde en Postgres
+    sync_connection.close()
 
     # 6. Calcular el tiempo de respuesta y guardamos los logs
     end_time = time.time()

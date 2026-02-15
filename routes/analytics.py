@@ -88,6 +88,6 @@ def get_system_health(session: Session = Depends(get_session), current_user: Use
   return {
     "ai_status": ai_status,
     "total_documents": total_docs or 0,
-    "last_sync": last_sync_date.isoformat() + "Z" if last_sync_date else None,
+    "last_sync": last_sync_date.isoformat() if last_sync_date else None,
     "failed_documents": failed_docs or 0
   }

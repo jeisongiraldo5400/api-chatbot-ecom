@@ -6,6 +6,8 @@ from models.query_log import QueryLog
 from models.services import Service
 from models.users import User
 from security import get_current_user
+from models.document import Document
+import os
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -56,4 +58,36 @@ def get_dashboard_metrics(session: Session = Depends(get_session), current_user:
       }
       for q in latest_queries
     ]
+  }
+
+
+@router.get("/system-health")
+def get_system_health(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+  """Obtiene el estado de salud del sistema para el Dashboard de Inicio"""
+
+  # 1. Estado de la IA
+  # Verificamos si la API Key de Gemini está configurada
+  api_key = os.getenv("GOOGLE_API_KEY")
+  ai_status = "connected" if api_key else "disconnected"
+
+  # 2. Total de documentos
+  total_docs = session.exec(select(func.count(Document.id))).one()
+
+  # 3. Documentos fallidos (Los que quedaron en estado 'ERROR')
+  # Ajusta 'ERROR' al string exacto que uses en tu base de datos si es diferente
+  failed_docs = session.exec(
+    select(func.count(Document.id)).where(Document.status == "ERROR")
+  ).one()
+
+  # 4. Última sincronización
+  # Buscamos la fecha máxima (más reciente) de los documentos subidos con éxito
+  last_sync_date = session.exec(
+    select(func.max(Document.upload_date)).where(Document.status == "READY")
+  ).one()
+
+  return {
+    "ai_status": ai_status,
+    "total_documents": total_docs or 0,
+    "last_sync": last_sync_date.isoformat() + "Z" if last_sync_date else None,
+    "failed_documents": failed_docs or 0
   }

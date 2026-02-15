@@ -1,7 +1,6 @@
 from typing import Optional
-from sqlmodel import SQLModel, Field
-from uuid import UUID, uuid4
-from datetime import datetime
+from sqlmodel import SQLModel, Field, Relationship
+from models.category import Category
 
 
 class ServiceBase(SQLModel):
@@ -17,9 +16,12 @@ class Service(ServiceBase, table=True):
   id: Optional[int] = Field(default=None, primary_key=True)
   status: bool = Field(default=True)
 
+  category: Optional[Category] = Relationship(back_populates="services")
+
 
 class ServiceCreate(ServiceBase):
   pass
+
 
 class ServiceUpdate(SQLModel):
   name: Optional[str] = None

@@ -4,8 +4,21 @@ from database import get_session
 from models.category import Category, CategoryCreate, CategoryUpdate
 from models.users import User
 from security import get_current_user
+from models.services import ServiceBase
+from models.category import CategoryBase
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
+
+
+class ServiceInfo(ServiceBase):
+  id: int
+  status: bool
+
+
+class CategoryWithServicesResponse(CategoryBase):
+  id: int
+  is_active: bool
+  services: list[ServiceInfo] = []
 
 
 @router.post("/", response_model=Category)
@@ -25,6 +38,15 @@ def create_category(category_data: CategoryCreate, session: Session = Depends(ge
 @router.get("/", response_model=list[Category])
 def read_categories(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   return session.exec(select(Category)).all()
+
+
+@router.get("/{category_id}/services", response_model=CategoryWithServicesResponse)
+def read_category_with_services(category_id: int, session: Session = Depends(get_session)):
+  db_category = session.get(Category, category_id)
+  if not db_category:
+    raise HTTPException(status_code=404, detail="Categoría no encontrada")
+
+  return db_category
 
 
 @router.patch("/{category_id}", response_model=Category)

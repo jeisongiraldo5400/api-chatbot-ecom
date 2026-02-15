@@ -1,11 +1,23 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from database import get_session
-from models.services import Service, ServiceCreate, ServiceUpdate
+from models.services import Service, ServiceCreate, ServiceUpdate, ServiceBase
 from models.users import User
 from security import get_current_user
+from models.category import CategoryBase
 
 router = APIRouter(prefix="/services", tags=['Services'])
+
+
+class CategoryInfo(CategoryBase):
+  id: int
+
+
+class ServiceWithCategoryResponse(ServiceBase):
+  id: int
+  status: bool
+  category: Optional[CategoryInfo] = None
 
 
 @router.post('/', response_model=Service)
@@ -23,12 +35,12 @@ def create_service(service_data: ServiceCreate, session: Session = Depends(get_s
   return db_service
 
 
-@router.get('/', response_model=list[Service])
+@router.get('/', response_model=list[ServiceWithCategoryResponse])
 def get_all_services(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   return session.exec(select(Service)).all()
 
 
-@router.get('/{service_id}')
+@router.get('/{service_id}', response_model=ServiceWithCategoryResponse)
 def get_service(service_id: int, session: Service = Depends(get_session)):
   db_service = session.get(Service, service_id)
   if not db_service:

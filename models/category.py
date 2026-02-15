@@ -1,6 +1,5 @@
-from typing import Optional
-from sqlmodel import SQLModel, Field
-
+from typing import Optional, List
+from sqlmodel import SQLModel, Field, Relationship
 
 class CategoryBase(SQLModel):
   name: str = Field(unique=True, index=True)
@@ -11,6 +10,8 @@ class Category(CategoryBase, table=True):
   __tablename__ = "categories"
   id: Optional[int] = Field(default=None, primary_key=True)
   is_active: bool = Field(default=True)
+
+  services: List["Service"] = Relationship(back_populates="category")
 
 
 class CategoryCreate(CategoryBase):

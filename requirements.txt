@@ -4,3 +4,5 @@ pgvector
 langchain
 python-dotenv
 sqlmodel
+passlib[bcrypt]
+bcrypt

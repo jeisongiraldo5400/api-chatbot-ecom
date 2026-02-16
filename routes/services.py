@@ -20,7 +20,7 @@ class ServiceWithCategoryResponse(ServiceBase):
   category: Optional[CategoryInfo] = None
 
 
-@router.post('/', response_model=Service)
+@router.post('', response_model=Service)
 def create_service(service_data: ServiceCreate, session: Session = Depends(get_session),
                    current_user: User = Depends(get_current_user)):
   """Create a new service"""
@@ -35,7 +35,7 @@ def create_service(service_data: ServiceCreate, session: Session = Depends(get_s
   return db_service
 
 
-@router.get('/', response_model=list[ServiceWithCategoryResponse])
+@router.get('', response_model=list[ServiceWithCategoryResponse])
 def get_all_services(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   return session.exec(select(Service)).all()
 

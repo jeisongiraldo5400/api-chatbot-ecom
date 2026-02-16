@@ -21,7 +21,7 @@ class CategoryWithServicesResponse(CategoryBase):
   services: list[ServiceInfo] = []
 
 
-@router.post("/", response_model=Category)
+@router.post("", response_model=Category)
 def create_category(category_data: CategoryCreate, session: Session = Depends(get_session),
                     current_user: User = Depends(get_current_user)):
   existing = session.exec(select(Category).where(Category.name == category_data.name)).first()
@@ -35,7 +35,7 @@ def create_category(category_data: CategoryCreate, session: Session = Depends(ge
   return db_category
 
 
-@router.get("/", response_model=list[Category])
+@router.get("", response_model=list[Category])
 def read_categories(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   return session.exec(select(Category)).all()
 

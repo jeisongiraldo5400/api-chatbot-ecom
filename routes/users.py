@@ -9,14 +9,14 @@ from security import get_current_user
 router = APIRouter(prefix='/users', tags=['Users'])
 
 
-@router.get('/', response_model=list[User])
+@router.get('', response_model=list[User])
 def get_all_users(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   """Get all users"""
   users = session.exec(select(User)).all()
   return users
 
 
-@router.post('/', response_model=User)
+@router.post('', response_model=User)
 def create_user(user_data: UserCreate, session: Session = Depends(get_session),
                 current_user: User = Depends(get_current_user)):
   """Create a new user"""

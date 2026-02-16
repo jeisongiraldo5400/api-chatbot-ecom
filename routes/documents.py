@@ -127,7 +127,7 @@ async def upload_document(
     raise HTTPException(status_code=500, detail=f"Error en el servidor: {str(e)}")
 
 
-@router.get("/")
+@router.get("")
 def get_all_documents(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   """Obtiene todos los documentos ordenados por el más reciente"""
   # Usamos desc() para que los últimos que subas aparezcan arriba en tu tabla

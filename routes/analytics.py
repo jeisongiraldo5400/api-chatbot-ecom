@@ -12,7 +12,7 @@ import os
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 
-@router.get('/')
+@router.get('')
 def get_dashboard_metrics(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   # 1. Total de consultas realizadas en toda la historia
   total_queries = session.exec(select(func.count(QueryLog.id))).one()

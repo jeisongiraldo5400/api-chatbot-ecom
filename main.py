@@ -15,8 +15,8 @@ origins = [origin.strip() for origin in origins_raw.split(",") if origin]
 
 app.add_middleware(
   CORSMiddleware,
-  allow_origins=origins,  # Permite peticiones de estas URLs
-  allow_credentials=True,  # Permite envío de cookies y headers de autorización (como tu JWT)
+  allow_origins=["*"],  # Permite peticiones de estas URLs
+  allow_credentials=False,  # Permite envío de cookies y headers de autorización (como tu JWT)
   allow_methods=["*"],  # Permite todos los métodos (GET, POST, PATCH, DELETE)
   allow_headers=["*"],  # Permite todos los headers
 )

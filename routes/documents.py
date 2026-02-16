@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
-from sqlmodel import Session, select
+from sqlmodel import Session, select, delete
 from uuid import UUID
 from database import get_session
 from models.document import Document, DocumentStatus
@@ -175,3 +175,50 @@ def view_document(document_id: UUID, session: Session = Depends(get_session)):
 
   except Exception as e:
     raise HTTPException(status_code=500, detail=f"Error al generar el enlace de S3: {str(e)}")
+
+
+@router.post("/{document_id}/reprocess")
+async def reprocess_document(
+  document_id: UUID,
+  background_tasks: BackgroundTasks,
+  session: Session = Depends(get_session),
+  current_user: User = Depends(get_current_user)
+):
+  """Limpia los errores y vuelve a enviar el documento a la cola de procesamiento IA"""
+
+  # 1. Buscar el documento
+  db_doc = session.get(Document, document_id)
+
+  if not db_doc:
+    raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+  # 2. Solo permitimos reprocesar los que fallaron
+  if db_doc.status != DocumentStatus.ERROR:
+    raise HTTPException(status_code=400, detail="Solo se pueden reprocesar documentos en estado ERROR")
+
+  try:
+    # 3. Limpiar fragmentos (chunks) huérfanos
+    # Si el proceso anterior falló por la mitad, borramos la basura para no duplicar datos
+    statement = delete(DocumentChunk).where(DocumentChunk.document_id == document_id)
+    session.exec(statement)
+
+    # 4. Cambiamos el estado de vuelta a PENDING para la UI
+    db_doc.status = DocumentStatus.PENDING
+    session.add(db_doc)
+    session.commit()
+
+    # 5. Preparamos la fábrica de sesiones para el BackgroundTask (Igual que en upload)
+    from database import engine
+    from sqlmodel import Session as SQLSession
+
+    def session_factory():
+      return SQLSession(engine)
+
+    # 6. Reutilizamos tu función original enviándola al fondo
+    background_tasks.add_task(process_document_task, db_doc.id, session_factory)
+
+    return {"message": "Reprocesamiento iniciado", "document_id": db_doc.id}
+
+  except Exception as e:
+    session.rollback()
+    raise HTTPException(status_code=500, detail=f"Error al intentar reprocesar: {str(e)}")

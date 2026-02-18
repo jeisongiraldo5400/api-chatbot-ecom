@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from database import init_db
 from routes import users, services, documents, chat, analytics, auth, categories
 import os
 
@@ -19,6 +20,12 @@ app.add_middleware(
   allow_methods=["*"],  # Permite todos los métodos (GET, POST, PATCH, DELETE)
   allow_headers=["*"],  # Permite todos los headers
 )
+
+
+# create table init app
+@app.on_event("startup")
+def on_startup():
+  init_db()
 
 
 # Routes

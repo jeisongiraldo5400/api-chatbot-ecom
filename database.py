@@ -15,7 +15,7 @@ if not postgres_url:
 if postgres_url.startswith("postgres://"):
     postgres_url = postgres_url.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(postgres_url, echo=True)
+engine = create_engine(postgres_url, echo=True, connect_args={"options": "-csearch_path=public"})
 
 def init_db():
   SQLModel.metadata.create_all(engine)

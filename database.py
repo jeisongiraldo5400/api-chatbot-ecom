@@ -1,5 +1,6 @@
 import os
 from sqlmodel import create_engine, Session, SQLModel
+from sqlalchemy import event
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,7 +16,13 @@ if not postgres_url:
 if postgres_url.startswith("postgres://"):
     postgres_url = postgres_url.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(postgres_url, echo=True, connect_args={"options": "-csearch_path=public"})
+engine = create_engine(postgres_url, echo=True)
+
+@event.listens_for(engine, "connect")
+def set_search_path(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("SET search_path TO public")
+    cursor.close()
 
 def init_db():
   SQLModel.metadata.create_all(engine)

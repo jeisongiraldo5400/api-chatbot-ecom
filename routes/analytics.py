@@ -71,18 +71,18 @@ def get_system_health(session: Session = Depends(get_session), current_user: Use
   ai_status = "connected" if api_key else "disconnected"
 
   # 2. Total de documentos
-  total_docs = session.exec(select(func.count(Document.id))).one()
+  total_docs = session.exec(select(func.count(Document.id)).where(Document.deleted_at == None)).one()
 
   # 3. Documentos fallidos (Los que quedaron en estado 'ERROR')
   # Ajusta 'ERROR' al string exacto que uses en tu base de datos si es diferente
   failed_docs = session.exec(
-    select(func.count(Document.id)).where(Document.status == "ERROR")
+    select(func.count(Document.id)).where(Document.status == "ERROR", Document.deleted_at == None)
   ).one()
 
   # 4. Última sincronización
   # Buscamos la fecha máxima (más reciente) de los documentos subidos con éxito
   last_sync_date = session.exec(
-    select(func.max(Document.upload_date)).where(Document.status == "READY")
+    select(func.max(Document.upload_date)).where(Document.status == "READY", Document.deleted_at == None)
   ).one()
 
   return {

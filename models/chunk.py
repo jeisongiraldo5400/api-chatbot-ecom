@@ -1,4 +1,5 @@
 from typing import Optional, List
+from datetime import datetime
 from sqlmodel import SQLModel, Field
 from uuid import UUID, uuid4
 from pgvector.sqlalchemy import Vector
@@ -15,3 +16,4 @@ class DocumentChunk(SQLModel, table=True):
   page_number: Optional[int] = None
 
   embedding: List[float] = Field(sa_column=Column(Vector(768)))
+  deleted_at: Optional[datetime] = Field(default=None)

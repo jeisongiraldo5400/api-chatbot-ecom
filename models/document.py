@@ -25,6 +25,7 @@ class Document(DocumentBase, table=True):
   id: UUID = Field(default_factory=uuid4, primary_key=True)
   upload_date: datetime = Field(default_factory=datetime.now)
   status: DocumentStatus = Field(default=DocumentStatus.PENDING)
+  deleted_at: Optional[datetime] = Field(default=None)
 
 
 class DocumentCreate(DocumentBase):

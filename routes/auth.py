@@ -26,7 +26,7 @@ class AuthResponse(BaseModel):
 
 @router.post("/login", response_model=AuthResponse)
 def login(credentials: LoginCredentials, session: Session = Depends(get_session)):
-  user = session.exec(select(User).where(User.email == credentials.email)).first()
+  user = session.exec(select(User).where(User.email == credentials.email, User.deleted_at == None)).first()
 
   if not user or not verify_password(credentials.password, user.password_hash):
     raise HTTPException(

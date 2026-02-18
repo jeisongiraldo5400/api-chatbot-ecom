@@ -1,8 +1,11 @@
 from typing import Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from database import get_session
 from models.services import Service, ServiceCreate, ServiceUpdate, ServiceBase
+from models.document import Document
+from models.chunk import DocumentChunk
 from models.users import User
 from security import get_current_user
 from models.category import CategoryBase
@@ -24,7 +27,7 @@ class ServiceWithCategoryResponse(ServiceBase):
 def create_service(service_data: ServiceCreate, session: Session = Depends(get_session),
                    current_user: User = Depends(get_current_user)):
   """Create a new service"""
-  existing = session.exec(select(Service).where(Service.name == service_data.name)).first()
+  existing = session.exec(select(Service).where(Service.name == service_data.name, Service.deleted_at == None)).first()
   if existing:
     raise HTTPException(status_code=400, detail="Service already exists")
 
@@ -37,13 +40,13 @@ def create_service(service_data: ServiceCreate, session: Session = Depends(get_s
 
 @router.get('', response_model=list[ServiceWithCategoryResponse])
 def get_all_services(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
-  return session.exec(select(Service)).all()
+  return session.exec(select(Service).where(Service.deleted_at == None)).all()
 
 
 @router.get('/{service_id}', response_model=ServiceWithCategoryResponse)
 def get_service(service_id: int, session: Service = Depends(get_session)):
   db_service = session.get(Service, service_id)
-  if not db_service:
+  if not db_service or db_service.deleted_at is not None:
     raise HTTPException(status_code=400, detail="Service not found")
 
   return db_service
@@ -72,11 +75,24 @@ def delete_service(service_id: int, session: Session = Depends(get_session),
                    current_user: User = Depends(get_current_user)):
   db_service = session.get(Service, service_id)
 
-  if not db_service:
+  if not db_service or db_service.deleted_at is not None:
     raise HTTPException(status_code=404, detail="Service not found")
 
-  session.delete(db_service)
+  now = datetime.now()
+  db_service.deleted_at = now
+
+  # Soft delete associated documents and their chunks
+  documents = session.exec(select(Document).where(Document.service_id == service_id, Document.deleted_at == None)).all()
+  for doc in documents:
+    doc.deleted_at = now
+    session.add(doc)
+    chunks = session.exec(select(DocumentChunk).where(DocumentChunk.document_id == doc.id, DocumentChunk.deleted_at == None)).all()
+    for chunk in chunks:
+      chunk.deleted_at = now
+      session.add(chunk)
+
+  session.add(db_service)
   session.commit()
   return {
-    "message": f"Service '{db_service.name}'delete"
+    "message": f"Service '{db_service.name}' deleted"
   }

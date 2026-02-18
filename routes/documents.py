@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlmodel import Session, select, delete
 from uuid import UUID
@@ -131,7 +132,7 @@ async def upload_document(
 def get_all_documents(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   """Obtiene todos los documentos ordenados por el más reciente"""
   # Usamos desc() para que los últimos que subas aparezcan arriba en tu tabla
-  statement = select(Document).order_by(Document.upload_date.desc())
+  statement = select(Document).where(Document.deleted_at == None).order_by(Document.upload_date.desc())
   documents = session.exec(statement).all()
 
   return documents
@@ -143,12 +144,19 @@ def delete_document(document_id: UUID, session: Session = Depends(get_session),
   """Elimina un documento y todos sus vectores de entrenamiento"""
   db_doc = session.get(Document, document_id)
 
-  if not db_doc:
+  if not db_doc or db_doc.deleted_at is not None:
     raise HTTPException(status_code=404, detail="Documento no encontrado")
 
-  # IMPORTANTE: Aquí eliminamos el registro de la DB
-  # (Opcionalmente, más adelante podríamos decirle a boto3 que también borre el PDF físico de S3)
-  session.delete(db_doc)
+  now = datetime.now()
+  db_doc.deleted_at = now
+  session.add(db_doc)
+
+  # Soft delete associated chunks
+  chunks = session.exec(select(DocumentChunk).where(DocumentChunk.document_id == document_id, DocumentChunk.deleted_at == None)).all()
+  for chunk in chunks:
+    chunk.deleted_at = now
+    session.add(chunk)
+
   session.commit()
 
   return {"message": "Documento y vectores de entrenamiento eliminados correctamente"}
@@ -160,7 +168,7 @@ def view_document(document_id: UUID, session: Session = Depends(get_session)):
 
   # 1. Buscar el documento en la base de datos
   db_doc = session.get(Document, document_id)
-  if not db_doc:
+  if not db_doc or db_doc.deleted_at is not None:
     raise HTTPException(status_code=404, detail="Documento no encontrado")
 
   try:
@@ -189,7 +197,7 @@ async def reprocess_document(
   # 1. Buscar el documento
   db_doc = session.get(Document, document_id)
 
-  if not db_doc:
+  if not db_doc or db_doc.deleted_at is not None:
     raise HTTPException(status_code=404, detail="Documento no encontrado")
 
   # 2. Solo permitimos reprocesar los que fallaron

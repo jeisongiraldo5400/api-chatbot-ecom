@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from database import get_session
@@ -12,7 +13,7 @@ router = APIRouter(prefix='/users', tags=['Users'])
 @router.get('', response_model=list[User])
 def get_all_users(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   """Get all users"""
-  users = session.exec(select(User)).all()
+  users = session.exec(select(User).where(User.deleted_at == None)).all()
   return users
 
 
@@ -61,10 +62,11 @@ def update_user(user_id: UUID, user_data: UserUpdate, session: Session = Depends
 def delete_user(user_id: UUID, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
   db_user = session.get(User, user_id)
 
-  if not db_user:
+  if not db_user or db_user.deleted_at is not None:
     raise HTTPException(status_code=404, detail="User not found")
 
-  session.delete(db_user)
+  db_user.deleted_at = datetime.now()
+  session.add(db_user)
   session.commit()
 
   return {

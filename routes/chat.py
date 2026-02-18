@@ -42,6 +42,8 @@ async def ask_chatbot(
       select(DocumentChunk.id, DocumentChunk.content, DocumentChunk.page_number)
       .join(Document, Document.id == DocumentChunk.document_id)
       .where(Document.service_id == service_id)
+      .where(Document.deleted_at == None)
+      .where(DocumentChunk.deleted_at == None)
       .order_by(DocumentChunk.embedding.cosine_distance(query_vector))
       .limit(5)
     )

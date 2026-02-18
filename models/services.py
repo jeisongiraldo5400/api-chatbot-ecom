@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from models.category import Category
 
@@ -15,6 +16,7 @@ class Service(ServiceBase, table=True):
   __tablename__ = "services"
   id: Optional[int] = Field(default=None, primary_key=True)
   status: bool = Field(default=True)
+  deleted_at: Optional[datetime] = Field(default=None)
 
   category: Optional[Category] = Relationship(back_populates="services")
 

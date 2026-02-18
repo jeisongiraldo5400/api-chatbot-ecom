@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from database import get_session
@@ -24,7 +25,7 @@ class CategoryWithServicesResponse(CategoryBase):
 @router.post("", response_model=Category)
 def create_category(category_data: CategoryCreate, session: Session = Depends(get_session),
                     current_user: User = Depends(get_current_user)):
-  existing = session.exec(select(Category).where(Category.name == category_data.name)).first()
+  existing = session.exec(select(Category).where(Category.name == category_data.name, Category.deleted_at == None)).first()
   if existing:
     raise HTTPException(status_code=400, detail="La categoría ya existe")
 
@@ -37,13 +38,13 @@ def create_category(category_data: CategoryCreate, session: Session = Depends(ge
 
 @router.get("", response_model=list[Category])
 def read_categories(session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
-  return session.exec(select(Category)).all()
+  return session.exec(select(Category).where(Category.deleted_at == None)).all()
 
 
 @router.get("/{category_id}/services", response_model=CategoryWithServicesResponse)
 def read_category_with_services(category_id: int, session: Session = Depends(get_session)):
   db_category = session.get(Category, category_id)
-  if not db_category:
+  if not db_category or db_category.deleted_at is not None:
     raise HTTPException(status_code=404, detail="Categoría no encontrada")
 
   return db_category
@@ -70,8 +71,9 @@ def update_category(category_id: int, category_data: CategoryUpdate, session: Se
 def delete_category(category_id: int, session: Session = Depends(get_session),
                     current_user: User = Depends(get_current_user)):
   db_category = session.get(Category, category_id)
-  if not db_category:
+  if not db_category or db_category.deleted_at is not None:
     raise HTTPException(status_code=404, detail="Categoría no encontrada")
-  session.delete(db_category)
+  db_category.deleted_at = datetime.now()
+  session.add(db_category)
   session.commit()
   return {"message": "Categoría eliminada"}
